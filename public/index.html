@@ -145,8 +145,8 @@ document.getElementById('speed').oninput = function () {
 };
 
 // ---- File ----
-document.getElementById('file-input').onchange = function () {
-  var file = this.files && this.files[0];
+function handleFileInput(el) {
+  var file = (el || this).files && (el || this).files[0];
   if (!file) return;
   window._file = file;
   var reader = new FileReader();
@@ -161,7 +161,10 @@ document.getElementById('file-input').onchange = function () {
     stopSpeech();
   };
   reader.readAsDataURL(file);
-};
+}
+var fi = document.getElementById('file-input');
+fi.addEventListener('change', function(e){ handleFileInput(e.target); });
+fi.addEventListener('input', function(e){ handleFileInput(e.target); });
 
 document.getElementById('change-btn').onclick = function () {
   document.getElementById('preview-card').style.display = 'none';
