@@ -139,6 +139,19 @@ loadVoices();
 setTimeout(loadVoices, 300);
 setTimeout(loadVoices, 1000);
 
+// Debug: бүх дуу хоолойг харуулах
+function showAllVoices() {
+  var v = speechSynthesis.getVoices();
+  var info = document.getElementById('voice-info');
+  if (!v.length) { info.textContent = 'Дуу хоолой олдсонгүй'; return; }
+  var txt = 'Нийт ' + v.length + ' дуу:\n';
+  v.forEach(function(x){ txt += x.lang + ' - ' + x.name + '\n'; });
+  info.textContent = txt;
+  info.style.whiteSpace = 'pre';
+  info.style.fontSize = '11px';
+}
+setTimeout(showAllVoices, 1500);
+
 // ---- Speed ----
 document.getElementById('speed').oninput = function () {
   document.getElementById('speed-val').textContent = parseFloat(this.value).toFixed(1) + 'x';
