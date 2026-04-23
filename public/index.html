@@ -403,8 +403,19 @@ function loadVoices() {
     var o=document.createElement('option');
     o.value=voices.indexOf(v);
     o.textContent=v.name+' ('+v.lang+')';
+    var o=document.createElement('option');
+    o.value=voices.indexOf(v);
+    o.textContent=v.name+' ('+v.lang+')';
     sel.appendChild(o);
   });
+  // kk эсвэл ru-г default болгох
+  for(var i=0; i<sel.options.length; i++){
+    var txt = sel.options[i].textContent;
+    if(txt.indexOf('(kk') !== -1 || txt.indexOf('(ru') !== -1){
+      sel.selectedIndex = i;
+      break;
+    }
+  }
 }
 loadVoices();
 speechSynthesis.onvoiceschanged = loadVoices;
