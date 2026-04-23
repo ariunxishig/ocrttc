@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   const chunk = text.slice(0, 200);
   
   try {
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ru&client=tw-ob&q=${encodeURIComponent(chunk)}`;
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=mn&client=tw-ob&q=${encodeURIComponent(chunk)}`;
     const response = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0' }
     });
