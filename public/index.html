@@ -115,42 +115,10 @@ main{width:100%;max-width:480px;padding:20px 16px;display:flex;flex-direction:co
 </main>
 
 <script>
-// ---- Voice ----
-var voices = [], selectedVoice = null, chunks = [], stopped = false, isPaused = false;
+// ---- TTS via Google Translate API ----
+var chunks = [], stopped = false, isPaused = false, currentAudio = null;
 
-function loadVoices() {
-  var v = speechSynthesis.getVoices();
-  if (!v.length) return;
-  voices = v;
-  selectedVoice = null;
-  var prefer = ['kk','ru','tr','mn'];
-  for (var p = 0; p < prefer.length; p++) {
-    for (var i = 0; i < voices.length; i++) {
-      if (voices[i].lang.startsWith(prefer[p])) { selectedVoice = voices[i]; break; }
-    }
-    if (selectedVoice) break;
-  }
-  document.getElementById('voice-info').textContent = selectedVoice
-    ? 'Дуу: ' + selectedVoice.name + ' (' + selectedVoice.lang + ')'
-    : 'Системийн өгөгдмөл дуу';
-}
-speechSynthesis.onvoiceschanged = loadVoices;
-loadVoices();
-setTimeout(loadVoices, 300);
-setTimeout(loadVoices, 1000);
-
-// Debug: бүх дуу хоолойг харуулах
-function showAllVoices() {
-  var v = speechSynthesis.getVoices();
-  var info = document.getElementById('voice-info');
-  if (!v.length) { info.textContent = 'Дуу хоолой олдсонгүй'; return; }
-  var txt = 'Нийт ' + v.length + ' дуу:\n';
-  v.forEach(function(x){ txt += x.lang + ' - ' + x.name + '\n'; });
-  info.textContent = txt;
-  info.style.whiteSpace = 'pre';
-  info.style.fontSize = '11px';
-}
-setTimeout(showAllVoices, 1500);
+document.getElementById('voice-info').textContent = 'Орос дуу хоолойгоор уншина (Google TTS)';
 
 // ---- Speed ----
 document.getElementById('speed').oninput = function () {
@@ -230,10 +198,16 @@ function showStatus(msg, type) {
 // ---- TTS ----
 function splitChunks(text) {
   var res = [];
-  text.split('\n').forEach(function (line) {
+  text.split('\n').forEach(function(line) {
     line = line.trim(); if (!line) return;
-    var parts = line.match(/[^.!?]+[.!?]*/g) || [line];
-    parts.forEach(function (p) { p = p.trim(); if (p) res.push(p); });
+    // 150 тэмдэгтээс урт бол хэсэглэх
+    while (line.length > 150) {
+      var idx = line.lastIndexOf(' ', 150);
+      if (idx < 0) idx = 150;
+      res.push(line.slice(0, idx).trim());
+      line = line.slice(idx).trim();
+    }
+    if (line) res.push(line);
   });
   return res;
 }
@@ -244,25 +218,45 @@ function setButtons(playing) {
   document.getElementById('stop-btn').disabled = !playing;
 }
 
-function speakChunk(idx) {
+async function speakChunk(idx) {
   if (stopped || idx >= chunks.length) {
-    if (!stopped) { document.getElementById('progress-bar').style.width = '100%'; document.getElementById('progress-status').textContent = 'Дууслаа.'; }
+    if (!stopped) {
+      document.getElementById('progress-bar').style.width = '100%';
+      document.getElementById('progress-status').textContent = 'Дууслаа.';
+    }
     setButtons(false); return;
   }
   document.getElementById('progress-bar').style.width = Math.round(idx / chunks.length * 100) + '%';
   document.getElementById('progress-status').textContent = (idx + 1) + ' / ' + chunks.length;
-  var u = new SpeechSynthesisUtterance(chunks[idx]);
-  u.rate = parseFloat(document.getElementById('speed').value);
-  if (selectedVoice) u.voice = selectedVoice;
-  u.onend = function () { if (!stopped && !isPaused) speakChunk(idx + 1); };
-  u.onerror = function (e) { if (e.error !== 'interrupted') { setButtons(false); } };
-  speechSynthesis.speak(u);
+
+  try {
+    var resp = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: chunks[idx] })
+    });
+    if (!resp.ok) throw new Error('TTS алдаа');
+    var blob = await resp.blob();
+    var url = URL.createObjectURL(blob);
+    currentAudio = new Audio(url);
+    currentAudio.playbackRate = parseFloat(document.getElementById('speed').value);
+    currentAudio.onended = function() {
+      URL.revokeObjectURL(url);
+      if (!stopped && !isPaused) speakChunk(idx + 1);
+    };
+    currentAudio.onerror = function() {
+      if (!stopped) speakChunk(idx + 1);
+    };
+    await currentAudio.play();
+  } catch(err) {
+    if (!stopped) speakChunk(idx + 1);
+  }
 }
 
 function playSpeech() {
   var txt = document.getElementById('text-area').value.trim();
   if (!txt) return;
-  speechSynthesis.cancel();
+  stopSpeech();
   chunks = splitChunks(txt); stopped = false; isPaused = false;
   setButtons(true);
   document.getElementById('progress-bar').style.width = '0%';
@@ -271,7 +265,9 @@ function playSpeech() {
 }
 
 function stopSpeech() {
-  stopped = true; isPaused = false; speechSynthesis.cancel(); setButtons(false);
+  stopped = true; isPaused = false;
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  setButtons(false);
   document.getElementById('progress-bar').style.width = '0%';
   document.getElementById('progress-status').textContent = '';
   document.getElementById('pause-btn').textContent = '⏸ Зогс';
@@ -279,11 +275,12 @@ function stopSpeech() {
 
 document.getElementById('play-btn').onclick = playSpeech;
 document.getElementById('stop-btn').onclick = stopSpeech;
-document.getElementById('pause-btn').onclick = function () {
+document.getElementById('pause-btn').onclick = function() {
+  if (!currentAudio) return;
   if (!isPaused) {
-    speechSynthesis.pause(); isPaused = true; this.textContent = '▶ Үргэл';
+    currentAudio.pause(); isPaused = true; this.textContent = '▶ Үргэл';
   } else {
-    speechSynthesis.resume(); isPaused = false; this.textContent = '⏸ Зогс';
+    currentAudio.play(); isPaused = false; this.textContent = '⏸ Зогс';
   }
 };
 </script>
