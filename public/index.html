@@ -358,10 +358,7 @@
     <textarea id="text-area" placeholder="Текст энд гарна..."></textarea>
 
     <div class="controls">
-      <div class="control-row">
-        <label>Дуу</label>
-        <select id="voice-select"></select>
-      </div>
+      <div id="voice-info" style="font-size:12px;color:var(--muted);padding:2px 0;"></div>
       <div class="control-row">
         <label>Хурд</label>
         <input type="range" id="speed-slider" min="0.5" max="2" step="0.1" value="0.9">
@@ -534,8 +531,7 @@ function speakChunk(idx){
 
   var u=new SpeechSynthesisUtterance(chunks[idx]);
   u.rate=parseFloat(document.getElementById('speed-slider').value);
-  var vi=parseInt(document.getElementById('voice-select').value);
-  if(!isNaN(vi)&&voices[vi]) u.voice=voices[vi];
+  if(selectedVoice) u.voice=selectedVoice;
 
   u.onend=function(){ if(!stopped&&!isPaused) speakChunk(idx+1); else chunkIdx=idx+1; };
   u.onerror=function(e){ if(e.error!=='interrupted'){ setButtons(false); document.getElementById('progress-status').textContent='Алдаа: '+e.error; } };
