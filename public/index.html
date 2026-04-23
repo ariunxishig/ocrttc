@@ -110,7 +110,6 @@
     color: var(--muted);
   }
 
-  #file-input { display: none; }
 
   /* Preview */
   #preview-wrap { display: none; }
@@ -423,8 +422,7 @@ document.getElementById('speed-slider').oninput = function(){
 };
 
 // File
-function handleFileChange(e) {
-  var file = e.target.files && e.target.files[0];
+function handleFile(file) {
   if(!file) return;
   window._file = file;
   var reader = new FileReader();
@@ -438,11 +436,14 @@ function handleFileChange(e) {
     document.getElementById('status').style.display = 'none';
     stopSpeech();
   };
+  reader.onerror = function(){ showStatus('Зураг уншихад алдаа гарлаа','error'); };
   reader.readAsDataURL(file);
 }
 var fileInput = document.getElementById('file-input');
-fileInput.addEventListener('change', handleFileChange);
-fileInput.addEventListener('input', handleFileChange);
+fileInput.addEventListener('change', function(e){
+  var file = e.target.files && e.target.files[0];
+  if(file) handleFile(file);
+});
 
 function resetUpload(){
   document.getElementById('preview-wrap').style.display='none';
