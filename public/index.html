@@ -338,7 +338,7 @@
       <span class="icon">🖼️</span>
       <h2>Зураг сонгох</h2>
       <p>Дарж зураг сонгох эсвэл камераар авах</p>
-      <input type="file" id="file-input" accept="image/*">
+      <input type="file" id="file-input" accept="image/*" capture="environment">
     </div>
     <div id="preview-wrap">
       <img id="preview-img" alt="preview">
@@ -414,23 +414,26 @@ document.getElementById('speed-slider').oninput = function(){
 };
 
 // File
-document.getElementById('file-input').onchange = function(e){
-  var file = e.target.files[0];
+function handleFileChange(e) {
+  var file = e.target.files && e.target.files[0];
   if(!file) return;
+  window._file = file;
   var reader = new FileReader();
   reader.onload = function(ev){
     document.getElementById('preview-img').src = ev.target.result;
     document.getElementById('preview-wrap').style.display = 'block';
     document.getElementById('upload-zone').style.display = 'none';
-    document.getElementById('file-name').textContent = file.name;
+    document.getElementById('file-name').textContent = file.name || 'зураг';
     document.getElementById('extract-btn').style.display = 'block';
     document.getElementById('result-wrap').style.display = 'none';
     document.getElementById('status').style.display = 'none';
     stopSpeech();
-    window._file = file;
   };
   reader.readAsDataURL(file);
-};
+}
+var fileInput = document.getElementById('file-input');
+fileInput.addEventListener('change', handleFileChange);
+fileInput.addEventListener('input', handleFileChange);
 
 function resetUpload(){
   document.getElementById('preview-wrap').style.display='none';
